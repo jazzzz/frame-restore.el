@@ -49,26 +49,30 @@
 ;;;Code:
 (require 'cl)
 
-;this must be global - as that is how desktop-globals-to-save works 
-;(defvar final-frame-params '((frame-parameter (selected-frame) 'font) 50 50 150 50 nil)) ;font, left, top, width, height, maximized
-(defvar final-frame-params '("-adobe-courier-medium-r-normal--*-120-*-*-m-*-iso8859-1" 50 50 150 50 nil)) ;font, left, top, width, height, maximized
+;this must be global - as that is how desktop-globals-to-save works
+(defvar final-frame-params '((frame-parameter (selected-frame) 'font) 50 50 150 50 nil)) ;font, left, top, width, height, maximized
+;(defvar final-frame-params '("-adobe-courier-medium-r-normal--*-120-*-*-m-*-iso8859-1" 50 50 150 50 nil)) ;font, left, top, width, height, maximized
 
 (if window-system
-	(add-hook 'after-init-hook
+	(add-hook 'desktop-after-read-hook
 			  '(lambda()
 				 "this is executed as emacs is coming up - _after_ final-frame-params have been read from `.emacs.desktop'."
-				 (when desktop-enable
-				   (desktop-load-default)
-				   (desktop-read)
-				   ;;now size and position frame according to the  values read from disk
-				   (set-default-font (first final-frame-params)) ;do font first - as it will goof with the frame size
-				   (set-frame-size (selected-frame) (fourth final-frame-params) (fifth final-frame-params))
-				   (set-frame-position (selected-frame) (max (eval (second final-frame-params)) 0)	(max (eval (third final-frame-params)) 0))
-				   (if (sixth final-frame-params)
-					   (if (eq window-system 'w32)
-						   (w32-send-sys-command ?\xf030)
+                 (let ((left (second final-frame-params))
+                       (top (third final-frame-params))
+                       (width (fourth final-frame-params))
+                       (height (fifth final-frame-params)))
+                   (add-to-list 'initial-frame-alist (cons 'left left))
+                   (add-to-list 'initial-frame-alist (cons 'top top))
+                   (add-to-list 'initial-frame-alist (cons 'width width))
+                   (add-to-list 'initial-frame-alist (cons 'height height))
+                   (set-default-font (first final-frame-params)) ;do font first - as it will goof with the frame size
+                   (set-frame-size (selected-frame) width height)
+                   (set-frame-position (selected-frame) (max left 0) (max top 0))
+                   (if (sixth final-frame-params)
+                       (if (eq window-system 'w32)
+                           (w32-send-sys-command ?\xf030)
 										;else, do X something
-						 ))))))
+                         ))))))
 
 (if window-system
 	(add-hook 'desktop-save-hook
@@ -82,9 +86,9 @@
 				   ;;prepend our vars to the save list so `desktop.el' will save them out to disk
 				   (setq desktop-globals-to-save (cons 'final-frame-params
 													   desktop-globals-to-save))
-				   
-				   (setq final-frame-params 
-						 (list 
+
+				   (setq final-frame-params
+						 (list
 						  (frame-parameter (selected-frame) 'font)
 						  (frame-parameter (selected-frame) 'left) ;x
 						  (frame-parameter (selected-frame) 'top) ;y
